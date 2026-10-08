@@ -3,7 +3,7 @@ from enum import Enum
 
 from tiendas_sm.validaciones import exigir_mayor_a_cero
 
-PLAZO_POR_DEFECTO_DIAS = 30
+PLAZO_POR_DEFECTO_DIAS = 45
 
 
 class StockInsuficiente(Exception):
