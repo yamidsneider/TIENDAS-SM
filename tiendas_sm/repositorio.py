@@ -1,6 +1,6 @@
 import sqlite3
 from datetime import datetime
-from tiendas_sm.dominio import Producto, Existencia, Cliente, CuentaPorCobrar
+from tiendas_sm.dominio import Producto, Existencia, Cliente, CuentaPorCobrar, EstadoCuenta
 
 
 class RepositorioSqlite:
@@ -113,7 +113,7 @@ class RepositorioSqlite:
 
     def _cargar_cuenta(self, f):
         cuenta = CuentaPorCobrar(f[0], f[1], f[2], f[5], f[3], f[4])
-        cuenta.estado = f[6]
+        cuenta.estado = EstadoCuenta(f[6])
         abonos = self.conexion.execute("SELECT valor FROM abonos WHERE id_cuenta=? ORDER BY id_abono", (f[0],)).fetchall()
         for a in abonos:
             cuenta.abonos.append(a[0])
@@ -138,13 +138,13 @@ class RepositorioSqlite:
             self.conexion.execute("INSERT INTO abonos (id_cuenta, valor, fecha) VALUES (?,?,?)",
                                   (cuenta.id_cuenta, valor, datetime.now().isoformat()))
             self.conexion.execute("UPDATE cuentas_por_cobrar SET estado=? WHERE id_cuenta=?",
-                                  (cuenta.estado, cuenta.id_cuenta))
+                                  (cuenta.estado.value, cuenta.id_cuenta))
 
     # ---------- venta a crédito (todo o nada) ----------
     def guardar_transaccion(self, venta, cuenta, existencias):
         with self.conexion:
             cur = self.conexion.execute("INSERT INTO ventas (id_cliente, fecha, estado, total) VALUES (?,?,?,?)",
-                                        (venta.id_cliente, venta.fecha.isoformat(), venta.estado, venta.total))
+                                        (venta.id_cliente, venta.fecha.isoformat(), venta.estado.value, venta.total))
             venta.id_venta = cur.lastrowid
             for d in venta.detalles:
                 self.conexion.execute(
@@ -156,7 +156,7 @@ class RepositorioSqlite:
                 "INSERT INTO cuentas_por_cobrar (id_venta, id_cliente, fecha_apertura, fecha_vencimiento, monto_credito_original, estado) "
                 "VALUES (?,?,?,?,?,?)",
                 (cuenta.id_venta, cuenta.id_cliente, cuenta.fecha_apertura.isoformat(),
-                 cuenta.fecha_vencimiento.isoformat(), cuenta.monto_original, cuenta.estado))
+                 cuenta.fecha_vencimiento.isoformat(), cuenta.monto_original, cuenta.estado.value))
             cuenta.id_cuenta = cur.lastrowid
             for ex in existencias:
                 self.conexion.execute("UPDATE existencias SET cantidad_actual=? WHERE id_producto=?",

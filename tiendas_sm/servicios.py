@@ -1,6 +1,10 @@
+from collections import namedtuple
 from datetime import datetime, timedelta
-from tiendas_sm.dominio import (Producto, Cliente, Venta, CuentaPorCobrar,
-                                StockInsuficiente, CreditoNoPermitido)
+
+from tiendas_sm.dominio import (Producto, Cliente, Venta, CuentaPorCobrar, StockInsuficiente,
+                                CreditoNoPermitido, PLAZO_POR_DEFECTO_DIAS)
+
+LineaDeVenta = namedtuple("LineaDeVenta", "id_producto cantidad")
 
 
 class ServicioDeProductos:
@@ -37,7 +41,8 @@ class ServicioDeClientes:
     def __init__(self, repo):
         self.repo = repo
 
-    def registrar_cliente(self, nombres, credito_habilitado, limite_credito, plazo_credito_dias=30):
+    def registrar_cliente(self, nombres, credito_habilitado, limite_credito,
+                          plazo_credito_dias=PLAZO_POR_DEFECTO_DIAS):
         c = Cliente(None, nombres, credito_habilitado, limite_credito, plazo_credito_dias)
         self.repo.guardar_cliente(c)
         return c
@@ -49,7 +54,7 @@ class ControlInventario:
 
     def hay_disponible(self, producto, cantidad):
         existencia = self.repo.obtener_existencia(producto.id_producto)
-        return existencia.cantidad_actual - existencia.cantidad_reservada >= cantidad
+        return existencia.cantidad_disponible() >= cantidad
 
     def descontar(self, producto, cantidad):
         existencia = self.repo.obtener_existencia(producto.id_producto)
@@ -70,7 +75,7 @@ class ControlCredito:
 
     def crear_cuenta(self, venta):
         apertura = datetime.now()
-        vencimiento = apertura + timedelta(days=30)
+        vencimiento = apertura + timedelta(days=PLAZO_POR_DEFECTO_DIAS)
         return CuentaPorCobrar(None, venta.id_venta, venta.id_cliente, venta.total, apertura, vencimiento)
 
     def registrar_abono(self, id_cuenta, monto):
@@ -109,23 +114,20 @@ class ServicioDeVentas:
         """Crea la venta y valida el stock. 'pedido' guarda, por producto, el total pedido."""
         venta = Venta(cliente.id_cliente)
         pedido = {}
-        for linea in lineas:
-            id_producto, cantidad = linea[0], linea[1]
-            producto = self.repo.obtener_producto(id_producto)
+        for linea in map(LineaDeVenta._make, lineas):
+            producto = self.repo.obtener_producto(linea.id_producto)
             if producto is None:
                 raise ValueError("El producto no existe")
-            if cantidad <= 0:
-                raise ValueError("La cantidad debe ser mayor a cero")
-            cantidad_total = pedido.get(id_producto, (producto, 0))[1] + cantidad
-            pedido[id_producto] = (producto, cantidad_total)
+            cantidad_total = pedido.get(producto.id_producto, (producto, 0))[1] + linea.cantidad
+            pedido[producto.id_producto] = (producto, cantidad_total)
             if not self.control_inventario.hay_disponible(producto, cantidad_total):
-                raise StockInsuficiente("No hay suficiente stock de " + producto.nombre)
-            venta.agregar_detalle(producto, cantidad)
+                raise StockInsuficiente(f"No hay suficiente stock de {producto.nombre}")
+            venta.agregar_detalle(producto, linea.cantidad)
         return venta, pedido
 
     def _validar_credito(self, cliente, total):
         if not self.control_credito.puede_comprar_a_credito(cliente, total):
-            raise CreditoNoPermitido("El cliente no puede comprar a crédito por " + str(total))
+            raise CreditoNoPermitido(f"El cliente no puede comprar a crédito por {total}")
 
     def _descontar_existencias(self, pedido):
         return [self.control_inventario.descontar(producto, cantidad)

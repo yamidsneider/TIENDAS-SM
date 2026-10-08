@@ -1,4 +1,9 @@
 from datetime import datetime
+from enum import Enum
+
+from tiendas_sm.validaciones import exigir_mayor_a_cero
+
+PLAZO_POR_DEFECTO_DIAS = 30
 
 
 class StockInsuficiente(Exception):
@@ -7,6 +12,17 @@ class StockInsuficiente(Exception):
 
 class CreditoNoPermitido(Exception):
     pass
+
+
+class EstadoVenta(str, Enum):
+    ABIERTA = "ABIERTA"
+    CONFIRMADA = "CONFIRMADA"
+    ANULADA = "ANULADA"
+
+
+class EstadoCuenta(str, Enum):
+    ABIERTA = "ABIERTA"
+    PAGADA = "PAGADA"
 
 
 class Producto:
@@ -21,10 +37,10 @@ class Producto:
         self.precio_venta = precio_venta
         self.stock_minimo = stock_minimo
 
-    def actualizar_precio(self, nuevo):
-        if nuevo < 0:
+    def actualizar_precio(self, nuevo_precio):
+        if nuevo_precio < 0:
             raise ValueError("El precio no puede ser negativo")
-        self.precio_venta = nuevo
+        self.precio_venta = nuevo_precio
 
 
 class Existencia:
@@ -33,17 +49,18 @@ class Existencia:
         self.cantidad_actual = cantidad_actual
         self.cantidad_reservada = cantidad_reservada
 
+    def cantidad_disponible(self):
+        return self.cantidad_actual - self.cantidad_reservada
+
     def descontar(self, cantidad):
-        if cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor a cero")
+        exigir_mayor_a_cero(cantidad)
         if cantidad > self.cantidad_actual:
-            raise StockInsuficiente("Solo hay " + str(self.cantidad_actual) + " disponibles")
-        self.cantidad_actual = self.cantidad_actual - cantidad
+            raise StockInsuficiente(f"Solo hay {self.cantidad_actual} disponibles")
+        self.cantidad_actual -= cantidad
 
     def aumentar(self, cantidad):
-        if cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor a cero")
-        self.cantidad_actual = self.cantidad_actual + cantidad
+        exigir_mayor_a_cero(cantidad)
+        self.cantidad_actual += cantidad
 
 
 class Cliente:
@@ -77,27 +94,26 @@ class Venta:
         self.id_venta = None
         self.id_cliente = id_cliente
         self.fecha = datetime.now()
-        self.estado = "ABIERTA"
+        self.estado = EstadoVenta.ABIERTA
         self.detalles = []
         self.total = 0
 
     def agregar_detalle(self, producto, cantidad):
-        if cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor a cero")
-        numero = len(self.detalles) + 1
-        self.detalles.append(DetalleVenta(numero, producto.id_producto, cantidad, producto.precio_venta))
+        exigir_mayor_a_cero(cantidad)
+        numero_linea = len(self.detalles) + 1
+        self.detalles.append(DetalleVenta(numero_linea, producto.id_producto, cantidad, producto.precio_venta))
 
     def calcular_total(self):
         self.total = sum(detalle.subtotal() for detalle in self.detalles)
         return self.total
 
     def confirmar(self):
-        if len(self.detalles) == 0:
+        if not self.detalles:
             raise ValueError("La venta no tiene productos")
-        self.estado = "CONFIRMADA"
+        self.estado = EstadoVenta.CONFIRMADA
 
     def anular(self):
-        self.estado = "ANULADA"
+        self.estado = EstadoVenta.ANULADA
 
 
 class CuentaPorCobrar:
@@ -109,16 +125,15 @@ class CuentaPorCobrar:
         self.fecha_apertura = fecha_apertura
         self.fecha_vencimiento = fecha_vencimiento
         self.abonos = []
-        self.estado = "ABIERTA"
+        self.estado = EstadoCuenta.ABIERTA
 
     def calcular_saldo(self):
         return self.monto_original - sum(self.abonos)
 
     def aplicar_pago(self, monto):
-        if monto <= 0:
-            raise ValueError("La cantidad debe ser mayor a cero")
+        exigir_mayor_a_cero(monto)
         if monto > self.calcular_saldo():
             raise ValueError("El abono no puede ser mayor al saldo")
         self.abonos.append(monto)
         if self.calcular_saldo() == 0:
-            self.estado = "PAGADA"
+            self.estado = EstadoCuenta.PAGADA
