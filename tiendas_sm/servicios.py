@@ -8,66 +8,66 @@ LineaDeVenta = namedtuple("LineaDeVenta", "id_producto cantidad")
 
 
 class ServicioDeProductos:
-    def __init__(self, repo):
-        self.repo = repo
+    def __init__(self, repo_productos):
+        self.repo_productos = repo_productos
 
     def registrar_producto(self, nombre, precio_compra, precio_venta, cantidad_inicial=0):
-        p = Producto(None, nombre, precio_compra, precio_venta)
-        self.repo.guardar_producto(p)
+        producto = Producto(None, nombre, precio_compra, precio_venta)
+        self.repo_productos.guardar(producto)
         if cantidad_inicial > 0:
-            self.registrar_entrada(p.id_producto, cantidad_inicial)
-        return p
+            self.registrar_entrada(producto.id_producto, cantidad_inicial)
+        return producto
 
     def obtener(self, id_producto):
-        return self.repo.obtener_producto(id_producto)
+        return self.repo_productos.obtener(id_producto)
 
     def listar(self):
-        return self.repo.listar_productos()
+        return self.repo_productos.listar()
 
-    def actualizar_precio(self, id_producto, nuevo):
-        p = self.repo.obtener_producto(id_producto)
-        p.actualizar_precio(nuevo)
-        self.repo.guardar_producto(p)
-        return p
+    def actualizar_precio(self, id_producto, nuevo_precio):
+        producto = self.repo_productos.obtener(id_producto)
+        producto.actualizar_precio(nuevo_precio)
+        self.repo_productos.guardar(producto)
+        return producto
 
     def registrar_entrada(self, id_producto, cantidad):
-        ex = self.repo.obtener_existencia(id_producto)
-        ex.aumentar(cantidad)
-        self.repo.guardar_existencia(ex, "ENTRADA", cantidad)
-        return ex
+        existencia = self.repo_productos.obtener_existencia(id_producto)
+        existencia.aumentar(cantidad)
+        self.repo_productos.guardar_existencia(existencia, "ENTRADA", cantidad)
+        return existencia
 
 
 class ServicioDeClientes:
-    def __init__(self, repo):
-        self.repo = repo
+    def __init__(self, repo_clientes):
+        self.repo_clientes = repo_clientes
 
     def registrar_cliente(self, nombres, credito_habilitado, limite_credito,
                           plazo_credito_dias=PLAZO_POR_DEFECTO_DIAS):
-        c = Cliente(None, nombres, credito_habilitado, limite_credito, plazo_credito_dias)
-        self.repo.guardar_cliente(c)
-        return c
+        cliente = Cliente(None, nombres, credito_habilitado, limite_credito, plazo_credito_dias)
+        self.repo_clientes.guardar(cliente)
+        return cliente
 
 
 class ControlInventario:
-    def __init__(self, repo):
-        self.repo = repo
+    def __init__(self, repo_productos):
+        self.repo_productos = repo_productos
 
     def hay_disponible(self, producto, cantidad):
-        existencia = self.repo.obtener_existencia(producto.id_producto)
+        existencia = self.repo_productos.obtener_existencia(producto.id_producto)
         return existencia.cantidad_disponible() >= cantidad
 
     def descontar(self, producto, cantidad):
-        existencia = self.repo.obtener_existencia(producto.id_producto)
+        existencia = self.repo_productos.obtener_existencia(producto.id_producto)
         existencia.descontar(cantidad)
         return existencia
 
 
 class ControlCredito:
-    def __init__(self, repo):
-        self.repo = repo
+    def __init__(self, repo_ventas):
+        self.repo_ventas = repo_ventas
 
     def saldo_pendiente(self, cliente):
-        cuentas = self.repo.cuentas_del_cliente(cliente.id_cliente)
+        cuentas = self.repo_ventas.cuentas_del_cliente(cliente.id_cliente)
         return sum(cuenta.calcular_saldo() for cuenta in cuentas)
 
     def puede_comprar_a_credito(self, cliente, monto):
@@ -79,20 +79,22 @@ class ControlCredito:
         return CuentaPorCobrar(None, venta.id_venta, venta.id_cliente, venta.total, apertura, vencimiento)
 
     def registrar_abono(self, id_cuenta, monto):
-        cuenta = self.repo.obtener_cuenta(id_cuenta)
+        cuenta = self.repo_ventas.obtener_cuenta(id_cuenta)
         cuenta.aplicar_pago(monto)
-        self.repo.guardar_abono(cuenta, monto)
+        self.repo_ventas.guardar_abono(cuenta, monto)
         return cuenta
 
     def cuentas_del_cliente(self, id_cliente):
-        return self.repo.cuentas_del_cliente(id_cliente)
+        return self.repo_ventas.cuentas_del_cliente(id_cliente)
 
 
 class ServicioDeVentas:
-    def __init__(self, repo):
-        self.repo = repo
-        self.control_inventario = ControlInventario(repo)
-        self.control_credito = ControlCredito(repo)
+    def __init__(self, repo_productos, repo_clientes, repo_ventas, control_inventario, control_credito):
+        self.repo_productos = repo_productos
+        self.repo_clientes = repo_clientes
+        self.repo_ventas = repo_ventas
+        self.control_inventario = control_inventario
+        self.control_credito = control_credito
 
     def registrar_venta_a_credito(self, id_cliente, lineas):
         cliente = self._obtener_cliente(id_cliente)
@@ -101,23 +103,27 @@ class ServicioDeVentas:
         existencias = self._descontar_existencias(pedido)
         venta.confirmar()
         cuenta = self.control_credito.crear_cuenta(venta)
-        self.repo.guardar_transaccion(venta, cuenta, existencias)
+        self.repo_ventas.guardar_transaccion(venta, cuenta, existencias)
         return venta
 
     def _obtener_cliente(self, id_cliente):
-        cliente = self.repo.obtener_cliente(id_cliente)
+        cliente = self.repo_clientes.obtener(id_cliente)
         if cliente is None:
             raise ValueError("El cliente no existe")
         return cliente
+
+    def _obtener_producto(self, id_producto):
+        producto = self.repo_productos.obtener(id_producto)
+        if producto is None:
+            raise ValueError("El producto no existe")
+        return producto
 
     def _armar_venta(self, cliente, lineas):
         """Crea la venta y valida el stock. 'pedido' guarda, por producto, el total pedido."""
         venta = Venta(cliente.id_cliente)
         pedido = {}
         for linea in map(LineaDeVenta._make, lineas):
-            producto = self.repo.obtener_producto(linea.id_producto)
-            if producto is None:
-                raise ValueError("El producto no existe")
+            producto = self._obtener_producto(linea.id_producto)
             cantidad_total = pedido.get(producto.id_producto, (producto, 0))[1] + linea.cantidad
             pedido[producto.id_producto] = (producto, cantidad_total)
             if not self.control_inventario.hay_disponible(producto, cantidad_total):
