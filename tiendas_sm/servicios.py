@@ -48,13 +48,13 @@ class ControlInventario:
         self.repo = repo
 
     def hay_disponible(self, producto, cantidad):
-        ex = self.repo.obtener_existencia(producto.id_producto)
-        return ex.cantidad_actual - ex.cantidad_reservada >= cantidad
+        existencia = self.repo.obtener_existencia(producto.id_producto)
+        return existencia.cantidad_actual - existencia.cantidad_reservada >= cantidad
 
     def descontar(self, producto, cantidad):
-        ex = self.repo.obtener_existencia(producto.id_producto)
-        ex.descontar(cantidad)
-        return ex
+        existencia = self.repo.obtener_existencia(producto.id_producto)
+        existencia.descontar(cantidad)
+        return existencia
 
 
 class ControlCredito:
@@ -63,10 +63,7 @@ class ControlCredito:
 
     def saldo_pendiente(self, cliente):
         cuentas = self.repo.cuentas_del_cliente(cliente.id_cliente)
-        saldo = 0
-        for c in cuentas:
-            saldo = saldo + c.calcular_saldo()
-        return saldo
+        return sum(cuenta.calcular_saldo() for cuenta in cuentas)
 
     def puede_comprar_a_credito(self, cliente, monto):
         if cliente.credito_habilitado == False:
@@ -77,9 +74,9 @@ class ControlCredito:
         return True
 
     def crear_cuenta(self, venta):
-        cli = self.repo.obtener_cliente(venta.id_cliente)
-        hoy = datetime.now()
-        return CuentaPorCobrar(None, venta.id_venta, venta.id_cliente, venta.total, hoy, hoy + timedelta(days=30))
+        apertura = datetime.now()
+        vencimiento = apertura + timedelta(days=30)
+        return CuentaPorCobrar(None, venta.id_venta, venta.id_cliente, venta.total, apertura, vencimiento)
 
     def registrar_abono(self, id_cuenta, monto):
         cuenta = self.repo.obtener_cuenta(id_cuenta)
@@ -94,38 +91,47 @@ class ControlCredito:
 class ServicioDeVentas:
     def __init__(self, repo):
         self.repo = repo
-        self.inv = ControlInventario(repo)
-        self.cred = ControlCredito(repo)
+        self.control_inventario = ControlInventario(repo)
+        self.control_credito = ControlCredito(repo)
 
     def registrar_venta_a_credito(self, id_cliente, lineas):
-        cli = self.repo.obtener_cliente(id_cliente)
-        if cli is None:
-            raise ValueError("El cliente no existe")
-        venta = Venta(id_cliente)
-        acumulado = {}
-        productos = {}
-        # recorre las lineas de la venta
-        for lin in lineas:
-            p = self.repo.obtener_producto(lin[0])
-            if p is None:
-                raise ValueError("El producto no existe")
-            if lin[1] <= 0:
-                raise ValueError("La cantidad debe ser mayor a cero")
-            productos[p.id_producto] = p
-            if p.id_producto in acumulado:
-                acumulado[p.id_producto] = acumulado[p.id_producto] + lin[1]
-            else:
-                acumulado[p.id_producto] = lin[1]
-            if not self.inv.hay_disponible(p, acumulado[p.id_producto]):
-                raise StockInsuficiente("No hay suficiente stock de " + p.nombre)
-            venta.agregar_detalle(p, lin[1])
-        total = venta.calcular_total()
-        if not self.cred.puede_comprar_a_credito(cli, total):
-            raise CreditoNoPermitido("El cliente no puede comprar a crédito por " + str(total))
-        existencias = []
-        for id_p in acumulado:
-            existencias.append(self.inv.descontar(productos[id_p], acumulado[id_p]))
+        cliente = self._obtener_cliente(id_cliente)
+        venta, pedido = self._armar_venta(cliente, lineas)
+        self._validar_credito(cliente, venta.calcular_total())
+        existencias = self._descontar_existencias(pedido)
         venta.confirmar()
-        cuenta = self.cred.crear_cuenta(venta)
+        cuenta = self.control_credito.crear_cuenta(venta)
         self.repo.guardar_transaccion(venta, cuenta, existencias)
         return venta
+
+    def _obtener_cliente(self, id_cliente):
+        cliente = self.repo.obtener_cliente(id_cliente)
+        if cliente is None:
+            raise ValueError("El cliente no existe")
+        return cliente
+
+    def _armar_venta(self, cliente, lineas):
+        """Crea la venta y valida el stock. 'pedido' guarda, por producto, el total pedido."""
+        venta = Venta(cliente.id_cliente)
+        pedido = {}
+        for linea in lineas:
+            id_producto, cantidad = linea[0], linea[1]
+            producto = self.repo.obtener_producto(id_producto)
+            if producto is None:
+                raise ValueError("El producto no existe")
+            if cantidad <= 0:
+                raise ValueError("La cantidad debe ser mayor a cero")
+            cantidad_total = pedido.get(id_producto, (producto, 0))[1] + cantidad
+            pedido[id_producto] = (producto, cantidad_total)
+            if not self.control_inventario.hay_disponible(producto, cantidad_total):
+                raise StockInsuficiente("No hay suficiente stock de " + producto.nombre)
+            venta.agregar_detalle(producto, cantidad)
+        return venta, pedido
+
+    def _validar_credito(self, cliente, total):
+        if not self.control_credito.puede_comprar_a_credito(cliente, total):
+            raise CreditoNoPermitido("El cliente no puede comprar a crédito por " + str(total))
+
+    def _descontar_existencias(self, pedido):
+        return [self.control_inventario.descontar(producto, cantidad)
+                for producto, cantidad in pedido.values()]

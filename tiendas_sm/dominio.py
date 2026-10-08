@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, date
+from datetime import datetime
 
 
 class StockInsuficiente(Exception):
@@ -11,7 +11,6 @@ class CreditoNoPermitido(Exception):
 
 class Producto:
     def __init__(self, id_producto, nombre, precio_compra, precio_venta, stock_minimo=0):
-        # el nombre es obligatorio
         if nombre is None or nombre.strip() == "":
             raise ValueError("El nombre es obligatorio")
         if precio_compra < 0 or precio_venta < 0:
@@ -83,12 +82,8 @@ class Venta:
         self.detalles.append(DetalleVenta(numero, producto.id_producto, cantidad, producto.precio_venta))
 
     def calcular_total(self):
-        # suma los subtotales de los detalles
-        t = 0
-        for d in self.detalles:
-            t = t + d.subtotal()
-        self.total = t
-        return t
+        self.total = sum(detalle.subtotal() for detalle in self.detalles)
+        return self.total
 
     def confirmar(self):
         if len(self.detalles) == 0:
