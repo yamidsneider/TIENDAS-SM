@@ -1,0 +1,29 @@
+test_hu06_abono_reduce_el_saldo (test_comportamiento.PruebasDeAbonos.test_hu06_abono_reduce_el_saldo) ... ok
+test_hu06_al_pagar_todo_la_cuenta_queda_pagada (test_comportamiento.PruebasDeAbonos.test_hu06_al_pagar_todo_la_cuenta_queda_pagada) ... ok
+test_hu06_rechaza_abono_de_cero_o_negativo (test_comportamiento.PruebasDeAbonos.test_hu06_rechaza_abono_de_cero_o_negativo) ... ok
+test_hu06_rechaza_abono_mayor_al_saldo (test_comportamiento.PruebasDeAbonos.test_hu06_rechaza_abono_mayor_al_saldo) ... ok
+test_deuda_el_vencimiento_deberia_usar_el_plazo_del_cliente (test_comportamiento.PruebasDeDeudaTecnica.test_deuda_el_vencimiento_deberia_usar_el_plazo_del_cliente)
+DT-02: hoy el vencimiento siempre es a 30 días (ignora plazo_credito_dias). ... expected failure
+test_hu01_rechaza_nombre_vacio (test_comportamiento.PruebasDeProductos.test_hu01_rechaza_nombre_vacio) ... ok
+test_hu01_rechaza_precio_negativo (test_comportamiento.PruebasDeProductos.test_hu01_rechaza_precio_negativo) ... ok
+test_hu01_registra_producto_valido (test_comportamiento.PruebasDeProductos.test_hu01_registra_producto_valido) ... ok
+test_hu02_actualizar_precio_no_cambia_ventas_anteriores (test_comportamiento.PruebasDeProductos.test_hu02_actualizar_precio_no_cambia_ventas_anteriores) ... ok
+test_hu02_rechaza_precio_invalido_y_conserva_el_anterior (test_comportamiento.PruebasDeProductos.test_hu02_rechaza_precio_invalido_y_conserva_el_anterior) ... ok
+test_hu03_entrada_aumenta_la_cantidad (test_comportamiento.PruebasDeProductos.test_hu03_entrada_aumenta_la_cantidad) ... ok
+test_hu03_rechaza_entrada_de_cero_o_negativa (test_comportamiento.PruebasDeProductos.test_hu03_rechaza_entrada_de_cero_o_negativa) ... ok
+test_cu01_cliente_inexistente (test_comportamiento.PruebasDeVentaACredito.test_cu01_cliente_inexistente) ... ok
+test_cu01_crea_la_cuenta_por_cobrar_con_el_total_como_deuda (test_comportamiento.PruebasDeVentaACredito.test_cu01_crea_la_cuenta_por_cobrar_con_el_total_como_deuda) ... ok
+test_cu01_el_saldo_pendiente_consume_el_limite_de_credito (test_comportamiento.PruebasDeVentaACredito.test_cu01_el_saldo_pendiente_consume_el_limite_de_credito) ... ok
+test_cu01_rechaza_cliente_sin_credito_habilitado (test_comportamiento.PruebasDeVentaACredito.test_cu01_rechaza_cliente_sin_credito_habilitado) ... ok
+test_cu01_rechaza_venta_que_supera_el_limite (test_comportamiento.PruebasDeVentaACredito.test_cu01_rechaza_venta_que_supera_el_limite) ... ok
+test_hu04_cuenta_el_mismo_producto_repetido_en_varias_lineas (test_comportamiento.PruebasDeVentaACredito.test_hu04_cuenta_el_mismo_producto_repetido_en_varias_lineas) ... ok
+test_hu04_rechaza_cantidad_cero_y_producto_inexistente (test_comportamiento.PruebasDeVentaACredito.test_hu04_rechaza_cantidad_cero_y_producto_inexistente) ... ok
+test_hu04_rechaza_stock_insuficiente_sin_cambiar_nada (test_comportamiento.PruebasDeVentaACredito.test_hu04_rechaza_stock_insuficiente_sin_cambiar_nada) ... ok
+test_hu04_rechaza_venta_sin_productos (test_comportamiento.PruebasDeVentaACredito.test_hu04_rechaza_venta_sin_productos) ... ok
+test_hu04_total_e_inventario_de_venta_con_dos_productos (test_comportamiento.PruebasDeVentaACredito.test_hu04_total_e_inventario_de_venta_con_dos_productos) ... ok
+test_rnf04_si_falla_al_guardar_no_queda_nada_a_medias (test_comportamiento.PruebasDeVentaACredito.test_rnf04_si_falla_al_guardar_no_queda_nada_a_medias) ... ok
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.017s
+
+OK (expected failures=1)
