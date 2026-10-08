@@ -1,0 +1,16 @@
+archivo               función                            líneas  params  anid.  ramas
+dominio.py            __init__                               10       5      1      4 P
+dominio.py            __init__                                6       5      0      0 P
+dominio.py            __init__                                5       4      0      0 P
+dominio.py            __init__                                9       6      0      0 P
+servicios.py          registrar_producto                      6       4      1      1 P
+servicios.py          registrar_cliente                       5       4      0      0 P
+servicios.py          __init__                                6       5      0      0 P
+
+Resumen
+  funciones/métodos analizados: 75
+  más de 15 líneas (L): 0 | más de 3 parámetros (P): 7 | anidamiento > 2 (A): 0
+  números mágicos (distintos de 0, 1, -1): 1 -> [('dominio.py', 30, 6)]
+  cadenas de estado repetidas: {'ABIERTA': 2}
+  clases grandes (>=10 métodos o >=100 líneas): {'repositorios.py:RepositorioDeVentasSqlite': (10, 63)}
+  código muerto: 0

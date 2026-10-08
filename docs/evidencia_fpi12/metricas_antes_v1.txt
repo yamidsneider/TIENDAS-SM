@@ -1,0 +1,21 @@
+archivo               función                            líneas  params  anid.  ramas
+dominio.py            __init__                               11       5      1      4 P
+dominio.py            __init__                                6       5      0      0 P
+dominio.py            __init__                                5       4      0      0 P
+dominio.py            __init__                                9       6      0      0 P
+repositorio.py        _crear_tablas                          39       0      0      0 L
+repositorio.py        guardar_transaccion                    20       3      2      3 L
+servicios.py          registrar_producto                      6       4      1      1 P
+servicios.py          registrar_cliente                       4       4      0      0 P
+servicios.py          registrar_venta_a_credito              32       2      2      8 L
+
+Resumen
+  funciones/métodos analizados: 52
+  más de 15 líneas (L): 3 | más de 3 parámetros (P): 6 | anidamiento > 2 (A): 0
+  números mágicos (distintos de 0, 1, -1): 17 -> [('repositorio.py', 6, 116), ('repositorio.py', 2, 74), ('repositorio.py', 3, 74), ('repositorio.py', 4, 74), ('repositorio.py', 2, 87), ('repositorio.py', 3, 112), ('repositorio.py', 4, 112), ('repositorio.py', 2, 115), ('repositorio.py', 5, 115), ('repositorio.py', 3, 115), ('repositorio.py', 4, 115), ('repositorio.py', 2, 79), ('repositorio.py', 3, 79), ('repositorio.py', 4, 79), ('repositorio.py', 2, 112), ('servicios.py', 30, 40), ('servicios.py', 30, 82)]
+  cadenas de estado repetidas: {'ABIERTA': 2}
+  clases grandes (>=10 métodos o >=100 líneas): {'repositorio.py:RepositorioSqlite': (14, 158)}
+  código muerto: 3
+    - dominio.py:1 importación sin usar 'timedelta'
+    - dominio.py:1 importación sin usar 'date'
+    - servicios.py:80 variable 'cli' asignada y nunca usada (en crear_cuenta)
