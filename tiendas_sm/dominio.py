@@ -54,6 +54,12 @@ class Cliente:
         self.limite_credito = limite_credito
         self.plazo_credito_dias = plazo_credito_dias
 
+    def credito_disponible(self, saldo_pendiente):
+        return self.limite_credito - saldo_pendiente
+
+    def puede_endeudarse(self, monto, saldo_pendiente):
+        return self.credito_habilitado and monto <= self.credito_disponible(saldo_pendiente)
+
 
 class DetalleVenta:
     def __init__(self, numero_linea, id_producto, cantidad, precio_unitario):

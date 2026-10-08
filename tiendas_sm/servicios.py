@@ -66,12 +66,7 @@ class ControlCredito:
         return sum(cuenta.calcular_saldo() for cuenta in cuentas)
 
     def puede_comprar_a_credito(self, cliente, monto):
-        if cliente.credito_habilitado == False:
-            return False
-        disponible = cliente.limite_credito - self.saldo_pendiente(cliente)
-        if monto > disponible:
-            return False
-        return True
+        return cliente.puede_endeudarse(monto, self.saldo_pendiente(cliente))
 
     def crear_cuenta(self, venta):
         apertura = datetime.now()
